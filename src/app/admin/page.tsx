@@ -20,15 +20,21 @@ interface Module {
   description: string;
 }
 
-interface UserModule {
+interface SupabaseModule {
   module_id: number;
   has_access: boolean;
 }
 
-interface FormattedUserModule {
+interface AppModule {
   moduleId: number;
   hasAccess: boolean;
 }
+
+// Função de conversão
+export const toAppModule = (module: SupabaseModule): AppModule => ({
+  moduleId: module.module_id,
+  hasAccess: module.has_access
+});
 
 const Tabs = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (tab: string) => void }) => {
   const tabs = [
@@ -65,7 +71,7 @@ export default function AdminPage() {
   ]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [userModules, setUserModules] = useState<FormattedUserModule[]>([]);
+  const [userModules, setUserModules] = useState<AppModule[]>([]);
   const [updateStatus, setUpdateStatus] = useState<{loading: boolean; error: string | null; success: string | null}>({loading: false, error: null, success: null});
   const [moduleIdBeingUpdated, setModuleIdBeingUpdated] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState('users');
@@ -142,10 +148,7 @@ export default function AdminPage() {
       .select('module_id, has_access')
       .eq('user_id', userId);
     
-    if (data) return data.map((item: UserModule) => ({
-      moduleId: item.module_id,
-      hasAccess: item.has_access
-    }));
+    if (data) return data.map(toAppModule);
     
     return [];
   };
@@ -169,8 +172,13 @@ export default function AdminPage() {
       
       setUpdateStatus({ loading: false, error: null, success: 'Permissão atualizada!' });
       setModuleIdBeingUpdated(null);
-    } catch (error) {
-      setUpdateStatus({ loading: false, error: 'Erro ao atualizar permissão', success: null });
+    } catch (error: unknown) {
+      const err = error as {message?: string};
+      setUpdateStatus({ 
+        loading: false, 
+        error: err.message || 'Erro ao atualizar permissão', 
+        success: null 
+      });
       setModuleIdBeingUpdated(null);
     }
   };
@@ -205,11 +213,12 @@ export default function AdminPage() {
       console.log('Configurações salvas com sucesso (registro único)');
       setClickupStatus({ loading: false, error: null, success: 'Configurações salvas!' });
       await loadClickupConfig();
-    } catch (error: any) {
-      console.error('Erro ao salvar:', error);
+    } catch (error: unknown) {
+      const err = error as {message?: string};
+      console.error('Erro ao salvar:', err);
       setClickupStatus({ 
         loading: false, 
-        error: 'Erro ao salvar: ' + error.message, 
+        error: err.message || 'Erro ao salvar configurações', 
         success: null 
       });
     }
@@ -231,17 +240,18 @@ export default function AdminPage() {
       
       if (data && data.length > 0) {
         console.log('Dados encontrados:', data[0]);
+        const config = data[0] as {api_key: string, team_id: string, list_id: string};
         setClickupConfig({
-          apiKey: data[0].api_key || '',
-          teamId: data[0].team_id || '',
-          defaultListId: data[0].default_list_id || ''
+          apiKey: config.api_key || '',
+          teamId: config.team_id || '',
+          defaultListId: config.list_id || ''
         });
       } else {
         console.log('Nenhum dado encontrado na tabela clickup_config');
       }
       
       setClickupStatus({ loading: false, error: null, success: null });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro completo:', error);
       setClickupStatus({ 
         loading: false, 
@@ -393,10 +403,7 @@ export default function AdminPage() {
                             <button 
                               onClick={() => {
                                 setSelectedUser(user);
-                                fetchUserModules(user.id).then(data => setUserModules(data.map((item: UserModule) => ({
-                                  moduleId: item.module_id,
-                                  hasAccess: item.has_access
-                                }))));
+                                fetchUserModules(user.id).then(data => setUserModules(data));
                               }}
                               className="text-blue-600 hover:text-blue-900 hover:underline"
                             >
