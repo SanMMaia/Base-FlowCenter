@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useState, useEffect } from 'react';
 import NewLayout from '@/components/NewLayout';
 import AdminGuard from '@/components/AdminGuard';
@@ -30,33 +31,76 @@ interface AppModule {
   hasAccess: boolean;
 }
 
+interface Tab {
+  id: string;
+  label: string;
+}
+
 // Função de conversão
 const toAppModule = (module: SupabaseModule): AppModule => ({
   moduleId: module.module_id,
   hasAccess: module.has_access
 });
 
+const tabs: Tab[] = [
+  { id: 'users', label: 'Gerenciar Usuários' },
+  { id: 'modules', label: 'Módulos Disponíveis' },
+  { id: 'clickup', label: 'Configurações ClickUp' }
+];
+
 const Tabs = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (tab: string) => void }) => {
-  const tabs = [
-    { id: 'users', label: 'Gerenciar Usuários' },
-    { id: 'modules', label: 'Módulos Disponíveis' },
-    { id: 'clickup', label: 'Configurações ClickUp' }
-  ];
+  if (!tabs.length) return <div>Carregando abas...</div>;
 
   return (
     <div className="flex border-b border-background/20 mb-6">
       {tabs.map(tab => (
         <button
           key={tab.id}
-          className={`px-4 py-2 font-medium text-sm ${activeTab === tab.id ? 'border-b-2 border-primary text-primary' : 'text-foreground/60 hover:text-foreground'}`}
-          onClick={() => setActiveTab(tab.id)}
+          role="tab"
+          aria-selected={activeTab === tab.id}
+          aria-controls={`tabpanel-${tab.id}`}
+          className={`px-4 py-2 font-medium text-sm transition-colors duration-200 ${
+            activeTab === tab.id 
+              ? 'border-b-2 border-primary text-primary' 
+              : 'text-foreground/60 hover:text-foreground hover:bg-background/10'
+          }`}
+          onClick={() => tab.id && setActiveTab(tab.id)}
         >
-          {tab.label}
+          {tab.label || 'Tab'}
         </button>
       ))}
     </div>
   );
 };
+
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      div: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
+      button: React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>;
+      span: React.DetailedHTMLProps<React.HTMLAttributes<HTMLSpanElement>, HTMLSpanElement>;
+      h1: React.DetailedHTMLProps<React.HTMLAttributes<HTMLHeadingElement>, HTMLHeadingElement>;
+      h2: React.DetailedHTMLProps<React.HTMLAttributes<HTMLHeadingElement>, HTMLHeadingElement>;
+      h3: React.DetailedHTMLProps<React.HTMLAttributes<HTMLHeadingElement>, HTMLHeadingElement>;
+      h4: React.DetailedHTMLProps<React.HTMLAttributes<HTMLHeadingElement>, HTMLHeadingElement>;
+      p: React.DetailedHTMLProps<React.HTMLAttributes<HTMLParagraphElement>, HTMLParagraphElement>;
+      section: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
+      table: React.DetailedHTMLProps<React.TableHTMLAttributes<HTMLTableElement>, HTMLTableElement>;
+      thead: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableSectionElement>, HTMLTableSectionElement>;
+      tbody: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableSectionElement>, HTMLTableSectionElement>;
+      tr: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableRowElement>, HTMLTableRowElement>;
+      th: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableCellElement>, HTMLTableCellElement>;
+      td: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableCellElement>, HTMLTableCellElement>;
+      input: React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>;
+      label: React.DetailedHTMLProps<React.LabelHTMLAttributes<HTMLLabelElement>, HTMLLabelElement>;
+      select: React.DetailedHTMLProps<React.SelectHTMLAttributes<HTMLSelectElement>, HTMLSelectElement>;
+      option: React.DetailedHTMLProps<React.OptionHTMLAttributes<HTMLOptionElement>, HTMLOptionElement>;
+      svg: React.SVGProps<SVGSVGElement>;
+      circle: React.SVGProps<SVGCircleElement>;
+      path: React.SVGProps<SVGPathElement>;
+    }
+  }
+}
 
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
@@ -74,7 +118,7 @@ export default function AdminPage() {
   const [userModules, setUserModules] = useState<AppModule[]>([]);
   const [updateStatus, setUpdateStatus] = useState<{loading: boolean; error: string | null; success: string | null}>({loading: false, error: null, success: null});
   const [moduleIdBeingUpdated, setModuleIdBeingUpdated] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeTab, setActiveTab] = useState<string>(tabs[0]?.id || '');
   const [clickupConfig, setClickupConfig] = useState({
     apiKey: '',
     teamId: '',
