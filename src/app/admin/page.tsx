@@ -31,7 +31,7 @@ interface AppModule {
 }
 
 // Função de conversão
-export const toAppModule = (module: SupabaseModule): AppModule => ({
+const toAppModule = (module: SupabaseModule): AppModule => ({
   moduleId: module.module_id,
   hasAccess: module.has_access
 });
