@@ -7,7 +7,6 @@ import {
   Cog6ToothIcon,
   ChatBubbleLeftIcon,
   UserIcon,
-  RectangleStackIcon,
   ArrowLeftCircleIcon,
   ArrowRightCircleIcon,
   ShieldCheckIcon,
@@ -49,15 +48,12 @@ export default function Sidebar() {
     return true;
   });
 
-  const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [availableModules, setAvailableModules] = useState<Module[]>([]);
 
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')

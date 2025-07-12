@@ -27,7 +27,7 @@ export default function AdminGuard({ children }: { children: React.ReactNode }) 
     };
 
     checkAdmin();
-  }, [router, supabase]);
+  }, [router]);
 
   return <>{children}</>;
 }

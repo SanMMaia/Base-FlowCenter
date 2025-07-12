@@ -122,14 +122,6 @@ export default function AdminPage() {
     if (!error) setUsers(data || []);
   };
 
-  const fetchModules = async () => {
-    const { data, error } = await supabase
-      .from('modules')
-      .select('*');
-    
-    if (!error) setModules(data || []);
-  };
-
   const updateUserRole = async (userId: string, newRole: 'user' | 'admin') => {
     const { error } = await supabase
       .from('profiles')

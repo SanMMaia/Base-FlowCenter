@@ -39,7 +39,7 @@ export default function ConfiguracoesPage() {
   
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [saveError, setSaveError] = useState(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [errors, setErrors] = useState({
     name: '',
@@ -51,7 +51,7 @@ export default function ConfiguracoesPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .select('full_name, email')
         .eq('id', user.id)
@@ -103,7 +103,7 @@ export default function ConfiguracoesPage() {
         email: userData.email
       });
       
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('profiles')
         .update({
           full_name: userData.name,
@@ -112,30 +112,18 @@ export default function ConfiguracoesPage() {
         .eq('id', user.id)
         .select();
 
-      if (error) {
-        if (error.code === '23505') {
-          console.error('Erro de violação de constraint:', error);
-          throw new Error('Email já está em uso');
-        } else if (error.code === '42501') {
-          console.error('Erro de permissão:', error);
-          throw new Error('Sem permissão para atualizar perfil');
-        } else {
-          console.error('Erro desconhecido:', error);
-          throw error;
-        }
-      }
-      
-      console.log('Resposta completa do Supabase:', { data, error });
+      console.log('Resposta completa do Supabase:', { data });
       
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string; code?: string; details?: string };
       console.error('Erro detalhado ao atualizar perfil:', {
-        message: error.message,
-        code: error.code,
-        details: error.details
+        message: err.message,
+        code: err.code,
+        details: err.details
       });
-      setSaveError(error.message || 'Erro ao atualizar perfil');
+      setSaveError(err.message || 'Erro ao atualizar perfil');
       setTimeout(() => setSaveError(null), 3000);
     } finally {
       setIsSaving(false);

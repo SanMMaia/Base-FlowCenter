@@ -20,7 +20,7 @@ export async function GET() {
         'Content-Type': 'text/html',
       },
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Error fetching Sacmais' },
       { status: 500 }

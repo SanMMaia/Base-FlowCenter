@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
 
 const RegisterForm = () => {
   const [email, setEmail] = useState('');
@@ -11,7 +10,6 @@ const RegisterForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const router = useRouter();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,7 +68,8 @@ const RegisterForm = () => {
         console.error('Perfil não criado:', profileError);
         throw new Error('Erro ao criar perfil do usuário');
       }
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const err = error as { message?: string };
       console.error('Erro completo:', err);
       setError(err.message || 'Erro desconhecido ao registrar');
     } finally {

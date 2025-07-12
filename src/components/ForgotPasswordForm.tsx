@@ -2,14 +2,12 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
 
 export default function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const router = useRouter();
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
