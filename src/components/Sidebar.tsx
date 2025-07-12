@@ -23,19 +23,19 @@ interface UserProfile {
 interface Module {
   id: number;
   name: string;
-  icon: any;
+  icon: string;
   path: string;
   adminOnly?: boolean;
 }
 
 const modules: Module[] = [
-  { id: 1, name: 'Dashboard', icon: HomeIcon, path: '/dashboard' },
-  { id: 2, name: 'Sacmais', icon: ChatBubbleLeftIcon, path: '/sacmais' },
-  { id: 3, name: 'Atendimentos', icon: PhoneIcon, path: '/atendimentos' },
-  { id: 4, name: 'Agenda', icon: CalendarIcon, path: '/agenda' },
-  { id: 5, name: 'Clientes', icon: UserIcon, path: '/clientes' },
-  { id: 6, name: 'Configurações', icon: Cog6ToothIcon, path: '/configuracoes' },
-  { id: 7, name: 'Admin', icon: ShieldCheckIcon, path: '/admin', adminOnly: true },
+  { id: 1, name: 'Dashboard', icon: 'HomeIcon', path: '/dashboard' },
+  { id: 2, name: 'Sacmais', icon: 'ChatBubbleLeftIcon', path: '/sacmais' },
+  { id: 3, name: 'Atendimentos', icon: 'PhoneIcon', path: '/atendimentos' },
+  { id: 4, name: 'Agenda', icon: 'CalendarIcon', path: '/agenda' },
+  { id: 5, name: 'Clientes', icon: 'UserIcon', path: '/clientes' },
+  { id: 6, name: 'Configurações', icon: 'Cog6ToothIcon', path: '/configuracoes' },
+  { id: 7, name: 'Admin', icon: 'ShieldCheckIcon', path: '/admin', adminOnly: true },
 ];
 
 export default function Sidebar() {
@@ -120,7 +120,13 @@ export default function Sidebar() {
             className={`flex items-center ${sidebarOpen ? 'px-4 py-3' : 'justify-center py-3'} 
               text-gray-800 font-medium hover:bg-gray-200`}
           >
-            <module.icon className={`${sidebarOpen ? 'mr-3' : ''} h-5 w-5 text-gray-600`} />
+            {module.icon === 'HomeIcon' && <HomeIcon className={`${sidebarOpen ? 'mr-3' : ''} h-5 w-5 text-gray-600`} />}
+            {module.icon === 'ChatBubbleLeftIcon' && <ChatBubbleLeftIcon className={`${sidebarOpen ? 'mr-3' : ''} h-5 w-5 text-gray-600`} />}
+            {module.icon === 'PhoneIcon' && <PhoneIcon className={`${sidebarOpen ? 'mr-3' : ''} h-5 w-5 text-gray-600`} />}
+            {module.icon === 'CalendarIcon' && <CalendarIcon className={`${sidebarOpen ? 'mr-3' : ''} h-5 w-5 text-gray-600`} />}
+            {module.icon === 'UserIcon' && <UserIcon className={`${sidebarOpen ? 'mr-3' : ''} h-5 w-5 text-gray-600`} />}
+            {module.icon === 'Cog6ToothIcon' && <Cog6ToothIcon className={`${sidebarOpen ? 'mr-3' : ''} h-5 w-5 text-gray-600`} />}
+            {module.icon === 'ShieldCheckIcon' && <ShieldCheckIcon className={`${sidebarOpen ? 'mr-3' : ''} h-5 w-5 text-gray-600`} />}
             {sidebarOpen && <span>{module.name}</span>}
           </Link>
         ))}

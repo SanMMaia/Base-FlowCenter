@@ -21,6 +21,11 @@ interface Module {
 }
 
 interface UserModule {
+  module_id: number;
+  has_access: boolean;
+}
+
+interface FormattedUserModule {
   moduleId: number;
   hasAccess: boolean;
 }
@@ -60,7 +65,7 @@ export default function AdminPage() {
   ]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [userModules, setUserModules] = useState<UserModule[]>([]);
+  const [userModules, setUserModules] = useState<FormattedUserModule[]>([]);
   const [updateStatus, setUpdateStatus] = useState<{loading: boolean; error: string | null; success: string | null}>({loading: false, error: null, success: null});
   const [moduleIdBeingUpdated, setModuleIdBeingUpdated] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState('users');
@@ -115,11 +120,11 @@ export default function AdminPage() {
   };
 
   const fetchUsers = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('profiles')
       .select('*');
     
-    if (!error) setUsers(data || []);
+    if (data) setUsers(data);
   };
 
   const updateUserRole = async (userId: string, newRole: 'user' | 'admin') => {
@@ -132,17 +137,17 @@ export default function AdminPage() {
   };
 
   const fetchUserModules = async (userId: string) => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('user_modules')
       .select('module_id, has_access')
       .eq('user_id', userId);
     
-    if (error) {
-      console.error('Erro ao buscar módulos do usuário:', error);
-      return [];
-    }
+    if (data) return data.map((item: UserModule) => ({
+      moduleId: item.module_id,
+      hasAccess: item.has_access
+    }));
     
-    return data || [];
+    return [];
   };
 
   const updateModuleAccess = async (userId: string, moduleId: number, access: boolean) => {
@@ -216,15 +221,13 @@ export default function AdminPage() {
     
     try {
       console.log('Buscando dados no Supabase...');
-      const { data, error, count } = await supabase
+      const { data, count } = await supabase
         .from('clickup_config')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .limit(1);
 
-      console.log('Resultado da query:', { data, error, count });
-      
-      if (error) throw error;
+      console.log('Resultado da query:', { data, count });
       
       if (data && data.length > 0) {
         console.log('Dados encontrados:', data[0]);
@@ -390,7 +393,7 @@ export default function AdminPage() {
                             <button 
                               onClick={() => {
                                 setSelectedUser(user);
-                                fetchUserModules(user.id).then(data => setUserModules(data.map((item: {module_id: number; has_access: boolean}) => ({
+                                fetchUserModules(user.id).then(data => setUserModules(data.map((item: UserModule) => ({
                                   moduleId: item.module_id,
                                   hasAccess: item.has_access
                                 }))));
