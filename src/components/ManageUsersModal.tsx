@@ -9,25 +9,15 @@ interface ManageUsersModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
-  users?: User[];
   onSave: (userData: User) => void;
-  setSelectedUser?: (user: User | null) => void;
-  fetchUserModules?: (userId: string) => Promise<AppModule[]>;
-  setUserModules?: (modules: AppModule[]) => void;
 }
 
 export default function ManageUsersModal({ 
-  isOpen, 
+  isOpen,
   onClose, 
   user,
-  users,
-  onSave,
-  setSelectedUser,
-  fetchUserModules,
-  setUserModules
+  onSave
 }: ManageUsersModalProps) {
-  if (!isOpen) return null;
-
   const [formData, setFormData] = useState<User>({
     id: '',
     email: '',
@@ -36,7 +26,7 @@ export default function ManageUsersModal({
     custom_id: null
   });
 
-  if (!user) return null;
+  if (!isOpen || !user) return null;
 
   return (
     <div className="fixed inset-0 bg-gray-200/10 backdrop-blur-sm flex items-center justify-center p-6 z-50 overflow-y-auto">
