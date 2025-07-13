@@ -10,8 +10,11 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "@supabase/supabase-js": "^2.50.5",
+    "@next-auth/supabase-adapter": "^0.2.1",
+    "@supabase/supabase-js": "^2.39.0",
+    "axios": "^1.6.7",
     "next": "15.3.5",
+    "next-auth": "^4.24.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

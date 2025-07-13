@@ -6,6 +6,7 @@ import NewLayout from '@/components/NewLayout';
 import AdminGuard from '@/components/AdminGuard';
 import supabase from '@/lib/supabase/client';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import ManageUsersModal from '@/components/ManageUsersModal';
 
 type User = {
   id: string;
@@ -129,6 +130,7 @@ export default function AdminPage() {
     error: string | null;
     success: string | null;
   }>({ loading: false, error: null, success: null });
+  const [manageUsersModalOpen, setManageUsersModalOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -545,30 +547,30 @@ export default function AdminPage() {
       </NewLayout>
       {selectedUser && (
         <div 
-          className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto"
+          className="fixed inset-0 bg-gray-200/10 backdrop-blur-sm flex items-center justify-center p-6 z-50 overflow-y-auto"
           onClick={() => setSelectedUser(null)}
         >
           <div 
-            className="bg-white/10 backdrop-blur-lg rounded-lg border border-white/20 p-6 w-full max-w-md max-h-[90vh] flex flex-col"
+            className="bg-white rounded-lg border border-gray-200 shadow-lg p-5 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden text-sm"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center mb-4 sticky top-0 z-10 py-2">
-              <h3 className="text-lg font-semibold">Gerenciar Módulos</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-base font-medium text-gray-900">Gerenciar Módulos</h3>
               <button 
                 onClick={() => setSelectedUser(null)}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-gray-500"
               >
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
-            <div className="overflow-y-auto flex-1">
-              <div className="space-y-2">
+            <div className="flex-1 overflow-y-auto pb-4">
+              <div className="space-y-3">
                 {modules.sort((a, b) => a.id - b.id).map(module => {
                   const hasAccess = checkModuleAccess(selectedUser.id, module.id);
                   return (
-                    <div key={module.id} className="flex items-center justify-between p-2 border-b">
+                    <div key={module.id} className="flex items-center justify-between p-3 border-b border-gray-200">
                       <div>
-                        <h4 className="font-medium">{module.name}</h4>
+                        <h4 className="font-medium text-gray-800">{module.name}</h4>
                         <p className="text-sm text-gray-500">{module.description}</p>
                       </div>
                       <div className="flex items-center">
@@ -586,7 +588,7 @@ export default function AdminPage() {
                             className="sr-only peer"
                             disabled={updateStatus.loading}
                           />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                           {updateStatus.loading && module.id === moduleIdBeingUpdated && (
                             <span className="ml-2 text-sm text-gray-500">Salvando...</span>
                           )}
@@ -603,8 +605,25 @@ export default function AdminPage() {
                 <div className="text-green-500 text-sm mt-2">{updateStatus.success}</div>
               )}
             </div>
+            <div className="flex justify-end pt-4 border-t border-gray-200">
+              <button
+                onClick={() => setSelectedUser(null)}
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
+      )}
+      {manageUsersModalOpen && (
+        <ManageUsersModal 
+          onClose={() => setManageUsersModalOpen(false)} 
+          users={users} 
+          setSelectedUser={setSelectedUser} 
+          fetchUserModules={fetchUserModules} 
+          setUserModules={setUserModules} 
+        />
       )}
     </AdminGuard>
   );
