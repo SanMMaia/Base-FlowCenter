@@ -109,29 +109,30 @@ ${chatText}`;
         const data = JSON.parse(jsonString);
         
         // Função auxiliar para extração segura de valores
-        const getValue = (obj: any, ...paths: string[]) => {
-          for (const path of paths) {
-            try {
-              const value = path.split('.').reduce((o, p) => o?.[p], obj);
-              if (value !== undefined && value !== null) return value;
-            } catch (e) {}
-          }
-          return '';
+        const getNestedValue = (obj: Record<string, unknown>, key: string): string => {
+          const value = key.split('.').reduce<unknown>((o: unknown, p: string) => {
+            if (typeof o === 'object' && o !== null && p in o) {
+              return (o as Record<string, unknown>)[p];
+            }
+            return undefined;
+          }, obj);
+          
+          return value !== undefined && value !== null ? String(value) : '';
         };
         
         // Extrai empresa corretamente (sem fallback para 'Haja')
-        const empresa = getValue(data, 'empresa', 'company');
+        const empresa = getNestedValue(data, 'empresa') || getNestedValue(data, 'company');
         
         // Extrai e formata datas com horários
-        const dataInicial = getValue(data, 'datas.inicial', 'datas_horarios.data_inicial', 'start_date');
-        const dataVencimento = getValue(data, 'datas.vencimento', 'datas_horarios.data_vencimento', 'due_date');
+        const dataInicial = getNestedValue(data, 'datas.inicial') || getNestedValue(data, 'datas_horarios.data_inicial') || getNestedValue(data, 'start_date');
+        const dataVencimento = getNestedValue(data, 'datas.vencimento') || getNestedValue(data, 'datas_horarios.data_vencimento') || getNestedValue(data, 'due_date');
         
         return {
-          title: getValue(data, 'titulo', 'título', 'title'),
-          cliente: getValue(data, 'descricao.cliente', 'descrição.cliente', 'cliente', 'client'),
-          motivo: getValue(data, 'descricao.motivo', 'descrição.motivo', 'motivo', 'reason'),
-          comentario: getValue(data, 'comentario', 'comentário', 'comment', 'solution'),
-          responsavel: getValue(data, 'responsavel', 'responsável', 'attendant'),
+          title: getNestedValue(data, 'titulo') || getNestedValue(data, 'título') || getNestedValue(data, 'title'),
+          cliente: getNestedValue(data, 'descricao.cliente') || getNestedValue(data, 'descrição.cliente') || getNestedValue(data, 'cliente') || getNestedValue(data, 'client'),
+          motivo: getNestedValue(data, 'descricao.motivo') || getNestedValue(data, 'descrição.motivo') || getNestedValue(data, 'motivo') || getNestedValue(data, 'reason'),
+          comentario: getNestedValue(data, 'comentario') || getNestedValue(data, 'comentário') || getNestedValue(data, 'comment') || getNestedValue(data, 'solution'),
+          responsavel: getNestedValue(data, 'responsavel') || getNestedValue(data, 'responsável') || getNestedValue(data, 'attendant'),
           empresa: empresa, // Usa o valor extraído sem fallback
           dataInicial: dataInicial,
           dataVencimento: dataVencimento

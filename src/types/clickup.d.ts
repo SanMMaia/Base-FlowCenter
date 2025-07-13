@@ -8,7 +8,7 @@ export interface ClickUpTaskPayload {
   start_date: number | null;
   custom_fields: Array<{
     id: string;
-    value: any;
+    value: string | number | boolean | null;
   }>;
 }
 
@@ -27,5 +27,12 @@ export interface ClickUpTaskInput {
   vencimentoTime: string;
   status: string;
   empresa: string;
-  custom_fields?: Record<string, any>;
+  custom_fields?: Record<string, string | number | boolean | null>;
+}
+
+export interface ClickUpCustomField {
+  id: string;
+  name: string;
+  type: string;
+  type_config: Record<string, unknown>;
 }
