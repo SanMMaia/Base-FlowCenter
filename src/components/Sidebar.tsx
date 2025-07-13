@@ -15,10 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { DESIGN } from '@/constants/design';
-
-interface UserProfile {
-  role: 'user' | 'admin';
-}
+import { User } from '@/types/commons';
 
 interface Module {
   id: number;
@@ -48,7 +45,7 @@ export default function Sidebar() {
     return true;
   });
 
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<User | null>(null);
   const [availableModules, setAvailableModules] = useState<Module[]>([]);
 
   useEffect(() => {
@@ -57,7 +54,7 @@ export default function Sidebar() {
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('role')
+          .select('id, email, full_name, role, custom_id')
           .eq('id', user?.id)
           .single();
         setProfile(profile);

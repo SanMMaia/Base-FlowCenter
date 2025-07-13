@@ -7,20 +7,7 @@ import AdminGuard from '@/components/AdminGuard';
 import supabase from '@/lib/supabase/client';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import ManageUsersModal from '@/components/ManageUsersModal';
-
-type User = {
-  id: string;
-  email: string;
-  full_name: string;
-  role: 'user' | 'admin';
-  custom_id: string | null;
-};
-
-interface Module {
-  id: number;
-  name: string;
-  description: string;
-}
+import { User, Module } from '@/types/commons';
 
 interface SupabaseModule {
   module_id: number;
@@ -74,45 +61,22 @@ const Tabs = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (t
   );
 };
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      div: React.DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>, HTMLDivElement>;
-      button: React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLButtonElement>, HTMLButtonElement>;
-      span: React.DetailedHTMLProps<React.HTMLAttributes<HTMLSpanElement>, HTMLSpanElement>;
-      h1: React.DetailedHTMLProps<React.HTMLAttributes<HTMLHeadingElement>, HTMLHeadingElement>;
-      h2: React.DetailedHTMLProps<React.HTMLAttributes<HTMLHeadingElement>, HTMLHeadingElement>;
-      h3: React.DetailedHTMLProps<React.HTMLAttributes<HTMLHeadingElement>, HTMLHeadingElement>;
-      h4: React.DetailedHTMLProps<React.HTMLAttributes<HTMLHeadingElement>, HTMLHeadingElement>;
-      p: React.DetailedHTMLProps<React.HTMLAttributes<HTMLParagraphElement>, HTMLParagraphElement>;
-      section: React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
-      table: React.DetailedHTMLProps<React.TableHTMLAttributes<HTMLTableElement>, HTMLTableElement>;
-      thead: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableSectionElement>, HTMLTableSectionElement>;
-      tbody: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableSectionElement>, HTMLTableSectionElement>;
-      tr: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableRowElement>, HTMLTableRowElement>;
-      th: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableCellElement>, HTMLTableCellElement>;
-      td: React.DetailedHTMLProps<React.HTMLAttributes<HTMLTableCellElement>, HTMLTableCellElement>;
-      input: React.DetailedHTMLProps<React.InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>;
-      label: React.DetailedHTMLProps<React.LabelHTMLAttributes<HTMLLabelElement>, HTMLLabelElement>;
-      select: React.DetailedHTMLProps<React.SelectHTMLAttributes<HTMLSelectElement>, HTMLSelectElement>;
-      option: React.DetailedHTMLProps<React.OptionHTMLAttributes<HTMLOptionElement>, HTMLOptionElement>;
-      svg: React.SVGProps<SVGSVGElement>;
-      circle: React.SVGProps<SVGCircleElement>;
-      path: React.SVGProps<SVGPathElement>;
-    }
+declare module 'react' {
+  interface HTMLAttributes<T> extends AriaAttributes, DOMAttributes<T> {
+    tab?: string;
   }
 }
 
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [modules, setModules] = useState<Module[]>([
-    { id: 1, name: 'Dashboard', description: 'Painel principal' },
-    { id: 2, name: 'Sacmais', description: 'Sistema de atendimento' },
-    { id: 3, name: 'Atendimentos', description: 'Gestão de atendimentos' },
-    { id: 4, name: 'Agenda', description: 'Agenda e calendário' },
-    { id: 5, name: 'Clientes', description: 'Gestão de clientes' },
-    { id: 6, name: 'Configurações', description: 'Configurações do sistema' },
-    { id: 7, name: 'Admin', description: 'Administração do sistema' }
+    { id: 1, name: 'Dashboard', description: 'Painel principal', path: '/dashboard' },
+    { id: 2, name: 'Sacmais', description: 'Sistema de atendimento', path: '/sacmais' },
+    { id: 3, name: 'Atendimentos', description: 'Gestão de atendimentos', path: '/atendimentos' },
+    { id: 4, name: 'Agenda', description: 'Agenda e calendário', path: '/agenda' },
+    { id: 5, name: 'Clientes', description: 'Gestão de clientes', path: '/clientes' },
+    { id: 6, name: 'Configurações', description: 'Configurações do sistema', path: '/configuracoes' },
+    { id: 7, name: 'Admin', description: 'Administração do sistema', path: '/admin', adminOnly: true },
   ]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);

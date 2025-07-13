@@ -5,29 +5,25 @@ import NewLayout from '@/components/NewLayout';
 import Loading from '@/components/Loading';
 import ChatToTaskModal from '@/components/ChatToTaskModal';
 import { createClickUpTask, getClickUpConfig } from '@/services/clickup';
-
-interface TaskData {
-  name: string;
-  description: string;
-  status: string;
-  custom_fields: {
-    "Cliente X Produto": string;
-    "Produto": string;
-  };
-}
+import { ClickUpTaskInput } from '@/types/clickup';
 
 export default function SacmaisPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const handleCreateTask = async (taskData: TaskData) => {
+  const handleCreateTask = async (taskData: ClickUpTaskInput) => {
     try {
       const config = await getClickUpConfig();
       await createClickUpTask(
-        taskData,
+        {
+          ...taskData,
+          titulo: taskData.name || taskData.titulo || '',
+          descricao: taskData.description || taskData.descricao || ''
+        },
         config.default_list_id,
         config.api_key
       );
       alert('Tarefa criada com sucesso no ClickUp!');
+      setIsModalOpen(false);
     } catch (error: unknown) {
       console.error('Erro ao criar tarefa:', error);
       const message = error instanceof Error ? error.message : 'Erro desconhecido';

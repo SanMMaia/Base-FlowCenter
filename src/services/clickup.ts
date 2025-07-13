@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import axios, { AxiosError } from 'axios';
+import { ClickUpTaskPayload, ClickUpTaskInput } from '@/types/clickup';
 
 const CLICKUP_API_URL = 'https://api.clickup.com/api/v2';
 
@@ -9,13 +10,13 @@ const toUnixMillis = (dateTimeStr: string) => {
   return new Date(dateTimeStr).getTime();
 };
 
-export async function createClickUpTask(taskData: any, listId: string, apiKey: string) {
+export async function createClickUpTask(taskData: ClickUpTaskInput, listId: string, apiKey: string): Promise<ClickUpTaskPayload> {
   try {
     console.log('[ClickUpService] Iniciando criação de tarefa com dados:', JSON.stringify(taskData, null, 2));
     console.log('[ClickUpService] List ID:', listId);
 
     // Validação reforçada
-    if (!taskData?.name || !listId || !apiKey) {
+    if (!taskData?.name && !taskData?.titulo || !listId || !apiKey) {
       console.error('[ClickUpService] Dados obrigatórios faltando:', {
         name: !!taskData?.name,
         listId: !!listId,
@@ -26,7 +27,6 @@ export async function createClickUpTask(taskData: any, listId: string, apiKey: s
 
     // Obter status disponíveis
     const statuses = await getListStatuses(listId, apiKey);
-    const defaultStatus = statuses.length > 0 ? statuses[0].status : 'open';
 
     // Formatação das datas em milissegundos
     const payload = {
@@ -70,23 +70,6 @@ export async function createClickUpTask(taskData: any, listId: string, apiKey: s
 
       console.log('[ClickUpService] Resposta completa da API:', JSON.stringify(response.data, null, 2));
       
-      // Ajuste nos campos customizados
-      const adjustedPayload = {
-        ...payload,
-        custom_fields: payload.custom_fields.map(field => {
-          if (field.id === '5afa0167-4dcb-4ee0-a0a9-f82d3f3cfa71') {
-            return {
-              ...field,
-              value: {
-                ...field.value,
-                name: taskData.empresa || 'Eobra' // Remove o sufixo - Eobra se necessário
-              }
-            };
-          }
-          return field;
-        })
-      };
-
       return response.data;
     } catch (error: unknown) {
       const axiosError = error as AxiosError;

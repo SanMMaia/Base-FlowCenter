@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { ClickUpTaskInput } from '@/types/clickup';
 
 type ChatToTaskModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (taskData: any) => void;
+  onSubmit: (taskData: ClickUpTaskInput) => void;
 };
 
 export default function ChatToTaskModal({ isOpen, onClose, onSubmit }: ChatToTaskModalProps) {
@@ -14,7 +15,6 @@ export default function ChatToTaskModal({ isOpen, onClose, onSubmit }: ChatToTas
   const [cliente, setCliente] = useState('');
   const [empresa, setEmpresa] = useState('');
   const [chatText, setChatText] = useState('');
-  const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [copyStatus, setCopyStatus] = useState('');
   const [titulo, setTitulo] = useState('');
@@ -33,7 +33,6 @@ export default function ChatToTaskModal({ isOpen, onClose, onSubmit }: ChatToTas
       return;
     }
     
-    const customId = `chat_${Date.now()}`;
     const prompt = `Analise a conversa de WhatsApp abaixo e gere um JSON com um resumo estruturado do atendimento contendo apenas as seguintes informações:
 
 {
@@ -56,7 +55,6 @@ ${chatText}`;
 
     try {
       await navigator.clipboard.writeText(prompt);
-      setGeneratedPrompt(prompt);
       setAiResponse('');
       setStep('review');
       setCopyStatus('Prompt copiado para a área de transferência!');
@@ -167,24 +165,18 @@ ${chatText}`;
   };
 
   const createTask = () => {
-    const taskData = {
-      name: titulo,
-      description: descricao,
-      status: status,
-      empresa: empresa,
-      custom_fields: {
-        "Cliente X Produto": empresa,
-        "Produto": "Eobra",
-        "Comentário": comentario,
-        "Responsável": responsavel,
-        "Data Inicial": dataInicial,
-        "Data de Vencimento": dataVencimento
-      }
-    };
-    
-    console.log('[ChatToTaskModal] Dados da tarefa antes do envio:', JSON.stringify(taskData, null, 2));
-    
-    onSubmit(taskData);
+    onSubmit({
+      titulo,
+      descricao: descricao,
+      comentario,
+      responsavel: parseInt(responsavel) || 0,
+      dataInicial,
+      dataVencimento,
+      inicioTime,
+      vencimentoTime,
+      status,
+      empresa
+    });
     onClose();
   };
 
@@ -194,7 +186,6 @@ ${chatText}`;
     setCliente('');
     setEmpresa('');
     setChatText('');
-    setGeneratedPrompt('');
     setAiResponse('');
     setTitulo('');
     setDescricao('');

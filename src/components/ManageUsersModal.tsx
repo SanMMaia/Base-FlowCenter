@@ -2,14 +2,7 @@
 
 import { useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-
-interface User {
-  id: string;
-  email: string;
-  full_name: string;
-  role: 'user' | 'admin';
-  custom_id: string | null;
-}
+import { User } from '@/types/commons';
 
 interface ManageUsersModalProps {
   isOpen: boolean;
