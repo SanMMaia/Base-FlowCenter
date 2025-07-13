@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { User } from '@/types/commons';
 import { AppModule } from '@/types/admin';
@@ -27,14 +27,35 @@ export default function ManageUsersModal({
   setUserModules
 }: ManageUsersModalProps) {
   const [formData, setFormData] = useState<User>({
-    id: '',
-    email: '',
-    full_name: '',
-    role: 'user',
-    custom_id: null
+    id: user?.id || '',
+    email: user?.email || '',
+    full_name: user?.full_name || '',
+    role: user?.role || 'user',
+    custom_id: user?.custom_id || null
   });
 
+  const [loadingModules, setLoadingModules] = useState(false);
+
+  // Carrega os módulos quando o usuário muda
+  useEffect(() => {
+    if (user?.id) {
+      setLoadingModules(true);
+      fetchUserModules(user.id)
+        .then(modules => {
+          setUserModules(modules);
+          setLoadingModules(false);
+        })
+        .catch(() => setLoadingModules(false));
+    }
+  }, [user?.id, fetchUserModules, setUserModules]);
+
   if (!isOpen || !user) return null;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave(formData);
+    setSelectedUser(null);
+  };
 
   return (
     <div className="fixed inset-0 bg-gray-200/10 backdrop-blur-sm flex items-center justify-center p-6 z-50 overflow-y-auto">
@@ -106,7 +127,7 @@ export default function ManageUsersModal({
             Cancelar
           </button>
           <button
-            onClick={() => onSave(formData)}
+            onClick={handleSubmit}
             className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             Salvar Alterações
