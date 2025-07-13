@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import axios, { AxiosError } from 'axios';
-import { ClickUpTaskPayload, ClickUpTaskInput } from '@/types/clickup';
+import { ClickUpTaskPayload, ClickUpTaskInput, ClickUpCustomField } from '@/types/clickup';
 
 const CLICKUP_API_URL = 'https://api.clickup.com/api/v2';
 
@@ -24,9 +24,6 @@ export async function createClickUpTask(taskData: ClickUpTaskInput, listId: stri
       });
       throw new Error('Dados obrigatórios não fornecidos');
     }
-
-    // Obter status disponíveis
-    const statuses = await getListStatuses(listId, apiKey);
 
     // Formatação das datas em milissegundos
     const payload = {
@@ -122,3 +119,23 @@ export async function getClickUpConfig() {
 
   return data;
 }
+
+export const getClickUpCustomFields = async (listId: string): Promise<ClickUpCustomField[]> => {
+  const response = await fetch(
+    `https://api.clickup.com/api/v2/list/${listId}/field`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: config.apiKey
+      }
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch ClickUp custom fields');
+  }
+
+  const data = await response.json();
+  return data.fields;
+};
