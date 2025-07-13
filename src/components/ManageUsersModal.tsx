@@ -3,19 +3,28 @@
 import { useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { User } from '@/types/commons';
+import { AppModule } from '@/types/admin';
 
 interface ManageUsersModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
+  users: User[];
   onSave: (userData: User) => void;
+  setSelectedUser: (user: User | null) => void;
+  fetchUserModules: (userId: string) => Promise<AppModule[]>;
+  setUserModules: (modules: AppModule[]) => void;
 }
 
 export default function ManageUsersModal({ 
   isOpen,
   onClose, 
   user,
-  onSave
+  users,
+  onSave,
+  setSelectedUser,
+  fetchUserModules,
+  setUserModules
 }: ManageUsersModalProps) {
   const [formData, setFormData] = useState<User>({
     id: '',
