@@ -62,7 +62,7 @@ export default function ManageUsersModal({
       <div className="bg-white rounded-lg border border-gray-200 shadow-lg p-5 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden text-sm">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-base font-medium text-gray-900">
-            Gerenciar Usuário
+            {user.id ? 'Editar Usuário' : 'Novo Usuário'}
           </h3>
           <button 
             onClick={onClose}
@@ -73,7 +73,29 @@ export default function ManageUsersModal({
         </div>
 
         <div className="flex-1 overflow-y-auto pb-4">
-          <div className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Seção de seleção de usuário (quando aplicável) */}
+            {users && users.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Selecionar Usuário
+                </label>
+                <select
+                  value={user.id}
+                  onChange={(e) => {
+                    const selected = users.find(u => u.id === e.target.value);
+                    setSelectedUser(selected || null);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Campos do formulário existentes */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
               <input
@@ -116,22 +138,35 @@ export default function ManageUsersModal({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
-          </div>
-        </div>
 
-        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Salvar Alterações
-          </button>
+            {/* Seção de módulos (quando disponível) */}
+            {loadingModules ? (
+              <div>Carregando módulos...</div>
+            ) : (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-2">Módulos Acessíveis</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Aqui viria a lista de módulos quando implementada */}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Salvar Alterações
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>
