@@ -16,7 +16,7 @@ const Tabs = ({ activeTab, setActiveTab }: {
   ];
 
   return (
-    <div className="flex border-b border-background/20 mb-6">
+    <div className="flex border-b border-background/20">
       {tabs.map(tab => (
         <button
           key={tab.id}
@@ -132,11 +132,16 @@ export default function ConfiguracoesPage() {
 
   return (
     <NewLayout>
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-6">Configurações</h1>
-        
-        <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Header Fixo */}
+      <div className="sticky top-0 z-10 backdrop-blur-sm border-b border-gray-200/50 shadow-sm">
+        <div className="px-6 pt-4 pb-2">
+          <h1 className="text-2xl font-bold text-gray-900 mb-5">Configurações</h1>
+          <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
+      </div>
 
+      {/* Conteúdo principal */}
+      <div className="px-6 py-4">
         {activeTab === 'profile' && (
           <div className="bg-white/80 backdrop-blur-sm p-4 rounded-lg shadow">
             <h2 className="text-xl font-semibold mb-4">Perfil</h2>

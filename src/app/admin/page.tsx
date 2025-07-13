@@ -40,7 +40,7 @@ const Tabs = ({ activeTab, setActiveTab }: { activeTab: string; setActiveTab: (t
   if (!tabs.length) return <div>Carregando abas...</div>;
 
   return (
-    <div className="flex border-b border-background/20 mb-6">
+    <div className="flex border-b border-background/20">
       {tabs.map(tab => (
         <button
           key={tab.id}
@@ -341,12 +341,21 @@ export default function AdminPage() {
   return (
     <AdminGuard>
       <NewLayout>
-        <div className="p-6">
-          <h1 className="text-2xl font-bold mb-6">Painel de Administração</h1>
-          <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+        {/* Header Fixo */}
+        <div className="sticky top-0 z-10 backdrop-blur-sm border-b border-gray-200/50 shadow-sm">
+          <div className="px-6 pt-4 pb-2">
+            <h1 className="text-2xl font-bold text-gray-900 mb-5">Painel de Administração</h1>
+            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+          </div>
+        </div>
+
+        {/* Conteúdo principal */}
+        <div className="px-6 py-4">
           {activeTab === 'users' && (
-            <section className="bg-white/80 backdrop-blur-sm shadow p-4 rounded-lg mb-8">
-              <h2 className="text-xl font-semibold mb-4">Gerenciar Usuários</h2>
+            <section className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold mb-4">Gerenciar Usuários</h2>
+              </div>
               <div className="bg-white rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -469,6 +478,30 @@ export default function AdminPage() {
               <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
                 <h2 className="text-base font-medium text-gray-900 mb-4">Configurações ClickUp</h2>
                 <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      API Key
+                    </label>
+                    <input
+                      type="password"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      value={clickupConfig.apiKey || ''}
+                      onChange={(e) => setClickupConfig({...clickupConfig, apiKey: e.target.value})}
+                      placeholder="Insira a API Key do ClickUp"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Team ID
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      value={clickupConfig.teamId || ''}
+                      onChange={(e) => setClickupConfig({...clickupConfig, teamId: e.target.value})}
+                      placeholder="Insira o Team ID"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Lista de Tarefas Padrão
