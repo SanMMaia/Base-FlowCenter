@@ -3,20 +3,31 @@
 import { useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { User } from '@/types/commons';
+import { AppModule } from '@/types/admin';
 
 interface ManageUsersModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
+  users?: User[];
   onSave: (userData: User) => void;
+  setSelectedUser?: (user: User | null) => void;
+  fetchUserModules?: (userId: string) => Promise<AppModule[]>;
+  setUserModules?: (modules: AppModule[]) => void;
 }
 
 export default function ManageUsersModal({ 
   isOpen, 
   onClose, 
   user,
-  onSave
+  users,
+  onSave,
+  setSelectedUser,
+  fetchUserModules,
+  setUserModules
 }: ManageUsersModalProps) {
+  if (!isOpen) return null;
+
   const [formData, setFormData] = useState<User>({
     id: '',
     email: '',
@@ -25,7 +36,7 @@ export default function ManageUsersModal({
     custom_id: null
   });
 
-  if (!isOpen || !user) return null;
+  if (!user) return null;
 
   return (
     <div className="fixed inset-0 bg-gray-200/10 backdrop-blur-sm flex items-center justify-center p-6 z-50 overflow-y-auto">

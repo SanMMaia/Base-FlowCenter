@@ -299,6 +299,23 @@ export default function AdminPage() {
     await saveClickupConfig();
   };
 
+  const handleSaveUser = async (userData: User) => {
+    try {
+      // Implementar lógica para salvar usuário
+      const { error } = await supabase
+        .from('users')
+        .upsert(userData);
+
+      if (error) throw error;
+      
+      // Atualizar lista de usuários após salvar
+      fetchUsers();
+      setManageUsersModalOpen(false);
+    } catch (error) {
+      console.error('Erro ao salvar usuário:', error);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'clickup') {
       loadClickupConfig();
@@ -582,8 +599,11 @@ export default function AdminPage() {
       )}
       {manageUsersModalOpen && (
         <ManageUsersModal 
+          isOpen={manageUsersModalOpen}
           onClose={() => setManageUsersModalOpen(false)} 
+          user={selectedUser}
           users={users} 
+          onSave={handleSaveUser}
           setSelectedUser={setSelectedUser} 
           fetchUserModules={fetchUserModules} 
           setUserModules={setUserModules} 
