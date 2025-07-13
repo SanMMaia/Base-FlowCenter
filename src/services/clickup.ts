@@ -120,14 +120,14 @@ export async function getClickUpConfig() {
   return data;
 }
 
-export const getClickUpCustomFields = async (listId: string): Promise<ClickUpCustomField[]> => {
+export const getClickUpCustomFields = async (listId: string, apiKey: string): Promise<ClickUpCustomField[]> => {
   const response = await fetch(
     `https://api.clickup.com/api/v2/list/${listId}/field`,
     {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: config.apiKey
+        Authorization: apiKey
       }
     }
   );
