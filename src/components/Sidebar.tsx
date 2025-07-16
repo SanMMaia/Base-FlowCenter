@@ -1,6 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+declare global {
+  interface Window {
+    addEventListener(type: 'modules-updated', listener: (event: CustomEvent) => void): void;
+  }
+}
+
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   HomeIcon,
@@ -16,6 +22,7 @@ import {
 import Link from 'next/link';
 import { DESIGN } from '@/constants/design';
 import { User } from '@/types/commons';
+import { useSession } from 'next-auth/react';
 
 interface Module {
   id: number;
@@ -25,6 +32,7 @@ interface Module {
   adminOnly?: boolean;
 }
 
+// Lista de módulos como constante padrão
 const modules: Module[] = [
   { id: 1, name: 'Dashboard', icon: 'HomeIcon', path: '/dashboard' },
   { id: 2, name: 'Sacmais', icon: 'ChatBubbleLeftIcon', path: '/sacmais' },
@@ -32,10 +40,38 @@ const modules: Module[] = [
   { id: 4, name: 'Agenda', icon: 'CalendarIcon', path: '/agenda' },
   { id: 5, name: 'Clientes', icon: 'UserIcon', path: '/clientes' },
   { id: 6, name: 'Configurações', icon: 'Cog6ToothIcon', path: '/configuracoes' },
-  { id: 7, name: 'Admin', icon: 'ShieldCheckIcon', path: '/admin', adminOnly: true },
+  { id: 7, name: 'Admin', icon: 'ShieldCheckIcon', path: '/admin', adminOnly: true }
 ];
 
 export default function Sidebar() {
+  const { data: session } = useSession();
+
+  // Agora sim usar useMemo dentro do componente
+  const memoizedModules = useMemo(() => modules, []);
+
+  const loadUserData = useCallback(async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, role, custom_id')
+        .eq('id', user.id)
+        .single();
+
+      const { data: userModules } = await supabase
+        .from('user_modules')
+        .select('module_id')
+        .eq('user_id', user.id)
+        .eq('has_access', true);
+
+      return { profile, userModules };
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    }
+  }, []);
+
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     // Recupera o estado salvo do localStorage
     if (typeof window !== 'undefined') {
@@ -48,35 +84,35 @@ export default function Sidebar() {
   const [profile, setProfile] = useState<User | null>(null);
   const [availableModules, setAvailableModules] = useState<Module[]>([]);
 
+  const fetchModules = useCallback(async () => {
+    const data = await loadUserData();
+    if (!data) return;
+    
+    const { profile, userModules } = data;
+    setProfile(profile);
+    
+    setAvailableModules(
+      memoizedModules.filter((module, index, self) => 
+        self.findIndex(m => m.id === module.id) === index &&
+        (!module.adminOnly || profile?.role === 'admin') &&
+        userModules?.some(m => m.module_id === module.id)
+      )
+    );
+  }, [loadUserData, memoizedModules]);
+
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, email, full_name, role, custom_id')
-          .eq('id', user?.id)
-          .single();
-        setProfile(profile);
+    fetchModules();
+  }, [fetchModules]);
 
-        const userId = user.id;
-        const { data: userModules } = await supabase
-          .from('user_modules')
-          .select('module_id')
-          .eq('user_id', userId)
-          .eq('has_access', true);
-
-        const availableModules = modules.filter(module => {
-          if (user?.role === 'admin') return true;
-          if (module.adminOnly) return false;
-          return userModules?.some(m => m.module_id === module.id);
-        });
-        setAvailableModules(availableModules);
-      }
+  useEffect(() => {
+    const handleUpdate = () => {
+      console.log('Atualizando todo o Sidebar');
+      fetchModules();
     };
 
-    getUser();
-  }, []);
+    window.addEventListener('modules-updated', handleUpdate);
+    return () => window.removeEventListener('modules-updated', handleUpdate);
+  }, [fetchModules]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -127,16 +163,6 @@ export default function Sidebar() {
             {sidebarOpen && <span>{module.name}</span>}
           </Link>
         ))}
-        {profile?.role === 'admin' && (
-          <Link 
-            href="/admin"
-            className={`flex items-center ${sidebarOpen ? 'px-4 py-3' : 'justify-center py-3'} 
-              text-gray-800 font-medium hover:bg-gray-200`}
-          >
-            <ShieldCheckIcon className={`${sidebarOpen ? 'mr-3' : ''} h-5 w-5 text-gray-600`} />
-            {sidebarOpen && <span>Admin</span>}
-          </Link>
-        )}
       </nav>
 
       <div className="p-4 border-t border-white/20">

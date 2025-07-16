@@ -3,6 +3,13 @@
 import { useState } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { ClickUpTaskInput } from '@/types/clickup';
+import { generateIAPrompt } from '@/services/clickupService';
+import { Button } from '@/components/ui/button';
+
+const RESPONSIBLE_ID_MAP: Record<string, number> = {
+  'Max': 49170204,
+  'Ana': 49170205
+};
 
 type ChatToTaskModalProps = {
   isOpen: boolean;
@@ -26,142 +33,61 @@ export default function ChatToTaskModal({ isOpen, onClose, onSubmit }: ChatToTas
   const [inicioTime, setInicioTime] = useState('08:00');
   const [vencimentoTime, setVencimentoTime] = useState('17:00');
   const [status, setStatus] = useState('Concluido');
+  const [promptCopied, setPromptCopied] = useState(false);
 
   const generatePrompt = async () => {
     if (!cliente || !chatText) {
-      alert('Por favor, preencha todos os campos obrigatórios');
+      setCopyStatus('Preencha todos os campos obrigatórios');
+      setTimeout(() => setCopyStatus(''), 3000);
       return;
     }
-    
-    const prompt = `Analise a conversa de WhatsApp abaixo e gere um JSON com um resumo estruturado do atendimento contendo apenas as seguintes informações:
-
-{
-  "título": "Crie um título sucinto que descreva a natureza do atendimento (ex: 'Atendimento - Problema com Login', 'Atendimento - Dúvida sobre Faturamento')",
-  "descrição": {
-    "cliente": "Nome do cliente",
-    "motivo": "Resumo do motivo do chamado com base na solicitação inicial do cliente"
-  },
-  "comentário": "Descrição da solução ou resposta fornecida pelo atendente",
-  "responsável": "Nome do atendente (custom_id). Não incluir 'Eobra'",
-  "empresa": "Haja",
-  "datas": {
-    "inicial": "Data atual + Horário da última mensagem",
-    "vencimento": "Data atual + Horário da última mensagem"
-  }
-}
-
-Conversa Completa:
-${chatText}`;
 
     try {
+      const prompt = generateIAPrompt(chatText, cliente, RESPONSIBLE_ID_MAP);
+      
       await navigator.clipboard.writeText(prompt);
       setAiResponse('');
       setStep('review');
-      setCopyStatus('Prompt copiado para a área de transferência!');
+      setCopyStatus('Prompt copiado com sucesso!');
+      setPromptCopied(true);
       
-      setTimeout(() => setCopyStatus(''), 3000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+      setTimeout(() => {
+        setCopyStatus('');
+        setPromptCopied(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Erro ao copiar:', error);
       setCopyStatus('Falha ao copiar o prompt');
     }
   };
 
   const extractDataFromResponse = (response: string) => {
-    // Fallback para resposta vazia
     if (!response?.trim()) {
-      return {
-        title: '',
-        cliente: '',
-        motivo: '',
-        comentario: response || '',
-        responsavel: '',
-        empresa: '',
-        dataInicial: '',
-        dataVencimento: ''
-      };
+      throw new Error('Resposta vazia');
     }
 
     try {
-      // Tenta encontrar o primeiro bloco JSON válido
-      const jsonMatch = response.match(/\{[\s\S]*?\}(?=\s*$|\s*\{|\s*\[)/);
-      
-      if (!jsonMatch) {
-        console.warn('[ChatToTaskModal] Nenhum JSON válido encontrado na resposta:', response);
-        return {
-          title: '',
-          cliente: '',
-          motivo: '',
-          comentario: response,
-          responsavel: '',
-          empresa: '',
-          dataInicial: '',
-          dataVencimento: ''
-        };
-      }
-      
-      let jsonString = jsonMatch[0];
-      
-      // Tenta corrigir JSONs malformados
-      try {
-        // Remove vírgulas finais inválidas
-        jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1');
-        
-        const data = JSON.parse(jsonString);
-        
-        // Função auxiliar para extração segura de valores
-        const getNestedValue = (obj: Record<string, unknown>, key: string): string => {
-          const value = key.split('.').reduce<unknown>((o: unknown, p: string) => {
-            if (typeof o === 'object' && o !== null && p in o) {
-              return (o as Record<string, unknown>)[p];
-            }
-            return undefined;
-          }, obj);
-          
-          return value !== undefined && value !== null ? String(value) : '';
-        };
-        
-        // Extrai empresa corretamente (sem fallback para 'Haja')
-        const empresa = getNestedValue(data, 'empresa') || getNestedValue(data, 'company');
-        
-        // Extrai e formata datas com horários
-        const dataInicial = getNestedValue(data, 'datas.inicial') || getNestedValue(data, 'datas_horarios.data_inicial') || getNestedValue(data, 'start_date');
-        const dataVencimento = getNestedValue(data, 'datas.vencimento') || getNestedValue(data, 'datas_horarios.data_vencimento') || getNestedValue(data, 'due_date');
-        
-        return {
-          title: getNestedValue(data, 'titulo') || getNestedValue(data, 'título') || getNestedValue(data, 'title'),
-          cliente: getNestedValue(data, 'descricao.cliente') || getNestedValue(data, 'descrição.cliente') || getNestedValue(data, 'cliente') || getNestedValue(data, 'client'),
-          motivo: getNestedValue(data, 'descricao.motivo') || getNestedValue(data, 'descrição.motivo') || getNestedValue(data, 'motivo') || getNestedValue(data, 'reason'),
-          comentario: getNestedValue(data, 'comentario') || getNestedValue(data, 'comentário') || getNestedValue(data, 'comment') || getNestedValue(data, 'solution'),
-          responsavel: getNestedValue(data, 'responsavel') || getNestedValue(data, 'responsável') || getNestedValue(data, 'attendant'),
-          empresa: empresa, // Usa o valor extraído sem fallback
-          dataInicial: dataInicial,
-          dataVencimento: dataVencimento
-        };
-      } catch (innerErr) {
-        console.error('[ChatToTaskModal] Erro ao processar JSON:', innerErr, '\nTrecho:', jsonString);
-        return {
-          title: '',
-          cliente: '',
-          motivo: '',
-          comentario: response,
-          responsavel: '',
-          empresa: '',
-          dataInicial: '',
-          dataVencimento: ''
-        };
-      }
-    } catch (err) {
-      console.error('[ChatToTaskModal] Erro geral ao processar resposta:', err);
+      const jsonWithoutComments = response.replace(/\/\/.*$/gm, '');
+      const data = JSON.parse(jsonWithoutComments);
+
+      const responsavel = Object.keys(RESPONSIBLE_ID_MAP).find(
+        key => RESPONSIBLE_ID_MAP[key] === data.assignees?.[0]
+      ) || '';
+
       return {
-        title: '',
-        cliente: '',
-        motivo: '',
-        comentario: response,
-        responsavel: '',
-        empresa: '',
-        dataInicial: '',
-        dataVencimento: ''
+        titulo: data.name || '',
+        descricao: `Cliente: ${data.description?.client || ''}\nMotivo: ${data.description?.reason || ''}`,
+        comentario: data.comment || '',
+        responsavel,
+        empresa: data.custom_fields?.company || '',
+        datas: {
+          inicial: data.start_date ? new Date(data.start_date).toLocaleString() : '',
+          vencimento: data.due_date ? new Date(data.due_date).toLocaleString() : ''
+        }
       };
+    } catch (error) {
+      console.error('Erro ao processar resposta:', error);
+      throw new Error('Formato de resposta inválido');
     }
   };
 
@@ -250,13 +176,12 @@ ${chatText}`;
               </div>
 
               <div className="flex justify-end mt-3">
-                <button
+                <Button
                   onClick={generatePrompt}
-                  className="bg-indigo-600 text-white py-1.5 px-3 rounded-md hover:bg-indigo-700 transition-colors"
                   disabled={!cliente || !chatText}
                 >
                   Criar Chat e Copiar
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -286,31 +211,30 @@ ${chatText}`;
               </div>
 
               <div className="flex justify-end gap-2">
-                <button
+                <Button
                   onClick={() => setStep('initial')}
-                  className="bg-gray-300 text-gray-900 py-1.5 px-3 rounded-md hover:bg-gray-400 transition-colors"
+                  variant="secondary"
                 >
                   Voltar
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => {
                     const parsedResponse = extractDataFromResponse(aiResponse);
-                    setTitulo(parsedResponse.title);
-                    setDescricao(`Cliente: ${parsedResponse.cliente}\nMotivo: ${parsedResponse.motivo}`);
+                    setTitulo(parsedResponse.titulo);
+                    setDescricao(parsedResponse.descricao);
                     setComentario(parsedResponse.comentario);
                     setResponsavel(parsedResponse.responsavel);
-                    setEmpresa(parsedResponse.empresa); // Usa o valor extraído sem fallback
-                    setDataInicial(parsedResponse.dataInicial);
-                    setDataVencimento(parsedResponse.dataVencimento);
-                    setInicioTime(parsedResponse.dataInicial?.split(' ')[1] || '08:00');
-                    setVencimentoTime(parsedResponse.dataVencimento?.split(' ')[1] || '17:00');
+                    setEmpresa(parsedResponse.empresa);
+                    setDataInicial(parsedResponse.datas.inicial);
+                    setDataVencimento(parsedResponse.datas.vencimento);
+                    setInicioTime(parsedResponse.datas.inicial?.split(' ')[1] || '08:00');
+                    setVencimentoTime(parsedResponse.datas.vencimento?.split(' ')[1] || '17:00');
                     setStep('final');
                   }}
-                  className="bg-indigo-600 text-white py-1.5 px-3 rounded-md hover:bg-indigo-700 transition-colors"
                   disabled={!aiResponse}
                 >
                   Revisar Atendimento
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -423,18 +347,17 @@ ${chatText}`;
         
         {step === 'final' && (
           <div className="flex justify-end gap-2 mt-3 pt-2 border-t border-gray-200">
-            <button
+            <Button
               onClick={() => setStep('review')}
-              className="bg-gray-300 text-gray-900 py-1.5 px-3 rounded-md hover:bg-gray-400 transition-colors text-sm"
+              variant="secondary"
             >
               Voltar
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleSubmit}
-              className="bg-indigo-600 text-white py-1.5 px-3 rounded-md hover:bg-indigo-700 transition-colors text-sm"
             >
               Confirmar e Enviar
-            </button>
+            </Button>
           </div>
         )}
       </div>

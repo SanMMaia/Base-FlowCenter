@@ -1,22 +1,20 @@
 'use client';
 
-import React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import NewLayout from '@/components/NewLayout';
 import AdminGuard from '@/components/AdminGuard';
 import supabase from '@/lib/supabase/client';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import ManageUsersModal from '@/components/ManageUsersModal';
 import { User, Module } from '@/types/commons';
-
-interface SupabaseModule {
-  module_id: number;
-  has_access: boolean;
-}
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Loader2, ListTodo, Users, Package } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Wifi, Save } from 'lucide-react';
 
 interface AppModule {
   moduleId: number;
-  hasAccess: boolean;
+  userId: string;
 }
 
 interface Tab {
@@ -24,11 +22,12 @@ interface Tab {
   label: string;
 }
 
-// Função de conversão
-const toAppModule = (module: SupabaseModule): AppModule => ({
-  moduleId: module.module_id,
-  hasAccess: module.has_access
-});
+interface ClickUpListResponse {
+  tasks?: unknown[];
+  error?: string;
+  listId?: string;
+  listName?: string;
+}
 
 const tabs: Tab[] = [
   { id: 'users', label: 'Gerenciar Usuários' },
@@ -67,6 +66,12 @@ declare module 'react' {
   }
 }
 
+const toast = {
+  success: (msg: string) => console.log('SUCCESS:', msg),
+  error: (msg: string) => console.error('ERROR:', msg),
+  warning: (msg: string) => console.warn('WARNING:', msg)
+};
+
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [modules, setModules] = useState<Module[]>([
@@ -97,6 +102,8 @@ export default function AdminPage() {
     success: string | null;
   }>({ loading: false, error: null, success: null });
   const [manageUsersModalOpen, setManageUsersModalOpen] = useState(false);
+  const [apiTestResults, setApiTestResults] = useState<{ [key: string]: ClickUpListResponse | null } | null>(null);
+  const [isTestingApi, setIsTestingApi] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -154,22 +161,31 @@ export default function AdminPage() {
     if (!error) fetchUsers();
   };
 
-  const fetchUserModules = async (userId: string) => {
+  const fetchUserModules = async (userId: string): Promise<AppModule[]> => {
     const { data } = await supabase
       .from('user_modules')
       .select('module_id, has_access')
       .eq('user_id', userId);
+
+    console.log('Dados brutos do Supabase:', data);
     
-    if (data) return data.map(toAppModule);
+    if (data) {
+      return data.map(item => ({
+        userId,
+        moduleId: item.module_id,
+      }));
+    }
     
     return [];
   };
 
   const updateModuleAccess = async (userId: string, moduleId: number, access: boolean) => {
     try {
+      console.log('Atualizando permissão:', {userId, moduleId, access});
       setUpdateStatus({ loading: true, error: null, success: null });
       setModuleIdBeingUpdated(moduleId);
       
+      // 1. Atualização atômica no banco
       const { error } = await supabase
         .from('user_modules')
         .upsert(
@@ -179,24 +195,34 @@ export default function AdminPage() {
 
       if (error) throw error;
       
-      // Disparar evento global de atualização
-      window.dispatchEvent(new CustomEvent('modules-updated'));
+      // 2. Atualização otimizada do estado local
+      setUserModules(prev => {
+        const updated = [...prev.filter(m => !(m.userId === userId && m.moduleId === moduleId))];
+        if (access) {
+          updated.push({userId, moduleId, hasAccess: access});
+        }
+        return updated;
+      });
+      
+      // 3. Disparar evento com timeout para garantir renderização
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('modules-updated', {
+          detail: { userId }
+        }));
+      }, 100);
       
       setUpdateStatus({ loading: false, error: null, success: 'Permissão atualizada!' });
-      setModuleIdBeingUpdated(null);
     } catch (error: unknown) {
-      const err = error as {message?: string};
-      setUpdateStatus({ 
-        loading: false, 
-        error: err.message || 'Erro ao atualizar permissão', 
-        success: null 
-      });
+      console.error('Erro ao atualizar permissão:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      setUpdateStatus({ loading: false, error: errorMessage, success: null });
+    } finally {
       setModuleIdBeingUpdated(null);
     }
   };
 
   const checkModuleAccess = (userId: string, moduleId: number) => {
-    return userModules.some(m => m.moduleId === moduleId && m.hasAccess);
+    return userModules.some(m => m.moduleId === moduleId && m.userId === userId);
   };
 
   const saveClickupConfig = async () => {
@@ -228,11 +254,11 @@ export default function AdminPage() {
       setClickupStatus({ loading: false, error: null, success: 'Configurações salvas!' });
       await loadClickupConfig();
     } catch (error: unknown) {
-      const err = error as {message?: string};
-      console.error('Erro ao salvar:', err);
+      console.error('Erro ao salvar:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao salvar configurações';
       setClickupStatus({ 
         loading: false, 
-        error: err.message || 'Erro ao salvar configurações', 
+        error: errorMessage, 
         success: null 
       });
     }
@@ -267,7 +293,7 @@ export default function AdminPage() {
       }
       
       setClickupStatus({ loading: false, error: null, success: null });
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('Erro completo:', error);
       setClickupStatus({ 
         loading: false, 
@@ -322,11 +348,44 @@ export default function AdminPage() {
     }
   };
 
+  const handleClose = () => {
+    setSelectedUser(null);
+  };
+
   useEffect(() => {
     if (activeTab === 'clickup') {
       loadClickupConfig();
     }
   }, [activeTab]);
+
+  const testClickUpApi = async () => {
+    setIsTestingApi(true);
+    try {
+      const results: { [key: string]: ClickUpListResponse | null } = {};
+      const lists = {
+        default: clickupConfig?.defaultListId,
+        clientesProdutos: clickupConfig?.clientProductsListId,
+        produtos: clickupConfig?.productsListId
+      };
+
+      for (const [key, listId] of Object.entries(lists)) {
+        if (listId) {
+          const res = await fetch(`/api/clickup/test?listId=${listId}`);
+          results[key] = await res.json();
+        }
+      }
+
+      setApiTestResults(results);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error('Falha ao testar API: ' + error.message);
+      } else {
+        toast.error('Erro desconhecido ao testar API');
+      }
+    } finally {
+      setIsTestingApi(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -443,9 +502,15 @@ export default function AdminPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <button 
-                              onClick={() => {
+                              onClick={async () => {
+                                console.log('Abrindo gerenciamento para usuário:', user.id);
+                                
+                                // Carregar módulos do usuário
+                                const modules = await fetchUserModules(user.id);
+                                console.log('Módulos carregados do banco:', modules);
+                                
+                                setUserModules(modules);
                                 setSelectedUser(user);
-                                fetchUserModules(user.id).then(data => setUserModules(data));
                               }}
                               className="text-blue-600 hover:text-blue-900 hover:underline"
                             >
@@ -545,13 +610,29 @@ export default function AdminPage() {
                       {clickupStatus.success}
                     </div>
                   )}
-                  <button 
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                    onClick={handleSaveClickupConfig}
-                    disabled={clickupStatus.loading}
-                  >
-                    {clickupStatus.loading ? 'Salvando...' : 'Salvar Configurações'}
-                  </button>
+                  <div className="flex justify-between mt-6">
+                    <Button
+                      type="button"
+                      onClick={handleSaveClickupConfig}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-1"
+                    >
+                      <Save className="h-4 w-4" />
+                      Salvar configurações
+                    </Button>
+
+                    <Button 
+                      onClick={testClickUpApi}
+                      disabled={isTestingApi}
+                      className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md flex items-center gap-1 disabled:opacity-50"
+                    >
+                      {isTestingApi ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Wifi className="h-4 w-4" />
+                      )}
+                      Testar API
+                    </Button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -561,7 +642,7 @@ export default function AdminPage() {
       {selectedUser && (
         <div 
           className="fixed inset-0 bg-gray-200/10 backdrop-blur-sm flex items-center justify-center p-6 z-50 overflow-y-auto"
-          onClick={() => setSelectedUser(null)}
+          onClick={handleClose}
         >
           <div 
             className="bg-white rounded-lg border border-gray-200 shadow-lg p-5 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden text-sm"
@@ -570,7 +651,7 @@ export default function AdminPage() {
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-base font-medium text-gray-900">Gerenciar Módulos</h3>
               <button 
-                onClick={() => setSelectedUser(null)}
+                onClick={handleClose}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <XMarkIcon className="h-5 w-5" />
@@ -590,16 +671,23 @@ export default function AdminPage() {
                         <label className="relative inline-flex items-center cursor-pointer">
                           <input 
                             type="checkbox" 
-                            checked={hasAccess}
+                            checked={userModules.some(m => 
+                              m.userId === selectedUser.id && 
+                              m.moduleId === module.id
+                            )}
                             onChange={(e) => {
                               const newAccess = e.target.checked;
-                              setUserModules(prev => prev.map(m => 
-                                m.moduleId === module.id ? { ...m, hasAccess: newAccess } : m
-                              ));
+                              setUserModules(prev => {
+                                const updated = [...prev.filter(m => !(m.userId === selectedUser.id && m.moduleId === module.id))];
+                                if (newAccess) {
+                                  updated.push({userId: selectedUser.id, moduleId: module.id});
+                                }
+                                return updated;
+                              });
                               updateModuleAccess(selectedUser.id, module.id, newAccess);
                             }}
                             className="sr-only peer"
-                            disabled={updateStatus.loading}
+                            disabled={moduleIdBeingUpdated === module.id}
                           />
                           <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                           {updateStatus.loading && module.id === moduleIdBeingUpdated && (
@@ -619,12 +707,12 @@ export default function AdminPage() {
               )}
             </div>
             <div className="flex justify-end pt-4 border-t border-gray-200">
-              <button
-                onClick={() => setSelectedUser(null)}
+              <Button
+                onClick={handleClose}
                 className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 Fechar
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -640,6 +728,53 @@ export default function AdminPage() {
           fetchUserModules={fetchUserModules} 
           setUserModules={setUserModules} 
         />
+      )}
+      {apiTestResults && (
+        <Dialog open={!!apiTestResults} onOpenChange={() => setApiTestResults(null)}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-6">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                <Wifi className="h-5 w-5 text-indigo-600" />
+                Resultados do Teste API ClickUp
+              </DialogTitle>
+              <DialogDescription className="text-sm text-gray-500">
+                Resposta da API para cada lista configurada
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="overflow-y-auto max-h-[calc(80vh-150px)] pr-2">
+              {Object.entries(apiTestResults).map(([key, result]) => (
+                <div key={key} className="bg-gray-50/50 p-4 rounded-lg border border-gray-200 mb-4 last:mb-0">
+                  <h3 className="font-medium text-gray-700 flex items-center gap-2 mb-2">
+                    {key === 'default' && (
+                      <>
+                        <ListTodo className="h-4 w-4 text-indigo-600" />
+                        Lista Padrão
+                      </>
+                    )}
+                    {key === 'clientesProdutos' && (
+                      <>
+                        <Users className="h-4 w-4 text-indigo-600" />
+                        Clientes × Produtos
+                      </>
+                    )}
+                    {key === 'produtos' && (
+                      <>
+                        <Package className="h-4 w-4 text-indigo-600" />
+                        Produtos
+                      </>
+                    )}
+                  </h3>
+                  <div className="bg-white p-3 rounded-md border border-gray-100 overflow-auto">
+                    <pre className="text-sm text-gray-700">
+                      {JSON.stringify(result, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </AdminGuard>
   );
